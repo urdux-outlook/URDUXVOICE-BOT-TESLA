@@ -1,0 +1,44 @@
+{
+  "name": "deepgram-streaming-voice-agent",
+  "version": "0.0.1",
+  "description": "Streaming Voice Agent Sample",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@ai-sdk/xai": "^1.0.14",
+    "@anthropic-ai/sdk": "^0.33.1",
+    "@deepgram/sdk": "^3.4.4",
+    "ai": "^4.0.22",
+    "bcrypt": "^5.1.1",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "expresss": "^0.0.0",
+    "fs": "^0.0.1-security",
+    "googleapis": "^144.0.0",
+    "groq-sdk": "^0.9.1",
+    "httpdispatcher": "^2.1.2",
+    "mammoth": "^1.9.0",
+    "moment-timezone": "^0.5.46",
+    "mongodb": "^6.12.0",
+    "mongoose": "^8.9.3",
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "^2.7.0",
+    "openai": "^4.52.7",
+    "pdf-parse": "^1.1.1",
+    "play-sound": "^1.1.6",
+    "twilio": "^5.4.0",
+    "web-audio-api": "^0.2.2",
+    "websocket": "^1.0.28",
+    "winston": "^3.17.0"
+  }
+}

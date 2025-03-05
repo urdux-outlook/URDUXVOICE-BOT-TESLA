@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Call Monitor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        @keyframes blink {
+            0% { background-color: #fff; }
+            50% { background-color: #fecaca; }
+            100% { background-color: #fff; }
+        }
+        .blink-row {
+            animation: blink 1s infinite;
+        }
+        #logContainer {
+            height: 200px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 4px;
+            border-bottom: 1px solid #eee;
+        }
+        .log-error { color: #dc2626; }
+        .log-info { color: #2563eb; }
+        .log-success { color: #059669; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-6">Call Monitor</h1>
+        
+        <!-- Status indicator -->
+        <div id="connectionStatus" class="mb-4 p-2 rounded text-white text-center">
+            Connecting to server...
+        </div>
+
+        <!-- Call Table -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Call Duration</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Call SID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="callTable">
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">Loading calls...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Debug Logs -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4">Debug Logs</h2>
+            <div id="logContainer" class="bg-gray-50 rounded p-2 h-64 overflow-y-auto">
+                <!-- Logs will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let refreshInterval;
+        let isInterveningCall = false;
+
+        // Logging functions
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type} mb-1`;
+            logEntry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            logContainer.insertBefore(logEntry, logContainer.firstChild);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // Update connection status
+        function updateConnectionStatus(status, type = 'info') {
+            const statusElement = document.getElementById('connectionStatus');
+            statusElement.textContent = status;
+            statusElement.className = `mb-4 p-2 rounded text-white text-center bg-${type === 'error' ? 'red' : type === 'success' ? 'green' : 'blue'}-500`;
+        }
+
+        function showErrorState() {
+            const tableBody = document.getElementById('callTable');
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-6 py-4 text-center text-red-500">
+                        Error loading call data. Please check server connection.
+                    </td>
+                </tr>
+            `;
+        }
+
+        // Enhanced front-end monitoring
+        function updateCallTable(calls) {
+            const tableBody = document.getElementById('callTable');
+            const logContainer = document.getElementById('logContainer');
+            
+            if (!calls || calls.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                    No active calls
+                </td>
+                </tr>
+            `;
+            log('No active calls found', 'info');
+            return;
+            }
+        
+            tableBody.innerHTML = '';
+            calls.forEach(call => {
+            log(`Call Update - SID: ${call.callSid}, Status: ${call.status}`, 'info');
+            
+            // Enhanced status tracking
+            const statusClass = {
+                'in-progress': 'bg-green-100 text-green-800',
+                'transferring': 'bg-yellow-100 text-yellow-800',
+                'transferred': 'bg-blue-100 text-blue-800',
+                'completed': 'bg-gray-100 text-gray-800'
+            }[call.status] || 'bg-gray-100 text-gray-800';
+        
+            const row = document.createElement('tr');
+            row.className = call.status === 'in-progress' ? 'bg-green-50' : '';
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap">${call.phoneNumber || 'Unknown'}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                    ${call.status}
+                </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">${call.duration || '-'}</td>
+                <td class="px-6 py-4 whitespace-nowrap">${call.callSid || '-'}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                ${call.status === 'in-progress' ? 
+                    `<button onclick="interveneCall('${call.callSid}')" 
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                    ${isInterveningCall ? 'disabled' : ''}>
+                    Intervene
+                    </button>` : 
+                    '-'
+                }
+                </td>
+            `;
+            tableBody.appendChild(row);
+            });
+        }
+                
+  // Updated client-side intervention function
+        async function interveneCall(callSid) {
+            if (isInterveningCall) {
+                return;
+            }
+
+            isInterveningCall = true;
+            clearInterval(refreshInterval);
+
+            const button = document.querySelector(`button[onclick="interveneCall('${callSid}')"]`);
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = `
+                    <span class="inline-flex items-center">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Transferring...
+                    </span>
+                `;
+            }
+
+            try {
+                // Prompt for intervention number
+                const defaultNumber = '+923004564477';
+                const interventionNumber = prompt('Enter the number to transfer the call to:', defaultNumber);
+                
+                if (!interventionNumber) {
+                    throw new Error('Transfer cancelled - no number provided');
+                }
+
+                // Validate phone number
+                const phoneRegex = /^\+[1-9]\d{1,14}$/;
+                if (!phoneRegex.test(interventionNumber)) {
+                    throw new Error('Invalid phone number format. Please use international format (e.g., +923004564477)');
+                }
+
+                // Confirm transfer
+                if (!confirm(`Transfer call ${callSid} to ${interventionNumber}?`)) {
+                    throw new Error('Transfer cancelled by user');
+                }
+
+                log(`Initiating instant transfer: ${callSid} → ${interventionNumber}`, 'info');
+
+                const response = await fetch('/api/intervene', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    },
+                    body: JSON.stringify({
+                        callSid,
+                        interventionNumber
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Transfer failed');
+                }
+
+                log(`Transfer successful: ${callSid} → ${interventionNumber}`, 'success');
+                alert('Transfer completed successfully!');
+
+            } catch (error) {
+                log(`Transfer failed: ${error.message}`, 'error');
+                alert(`Transfer failed: ${error.message}`);
+                
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = 'Intervene';
+                }
+            } finally {
+                isInterveningCall = false;
+                refreshInterval = setInterval(fetchCallData, 5000);
+                fetchCallData(); // Immediate refresh
+            }
+        }
+
+        // Add enhanced error handling for fetch calls
+        async function fetchCallData() {
+            if (isInterveningCall) {
+                return;
+            }
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                const response = await fetch('/api/calls', {
+                    signal: controller.signal,
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                updateCallTable(data);
+                updateConnectionStatus('Connected', 'success');
+                
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    log('Request timeout - server not responding', 'error');
+                } else {
+                    log(`Error fetching calls: ${error.message}`, 'error');
+                }
+                updateConnectionStatus('Connection Error', 'error');
+                showErrorState();
+            }
+        }
+            
+// Initial log
+        log('Monitor page initialized');
+        
+        // Start refresh interval
+        refreshInterval = setInterval(fetchCallData, 5000);
+        
+        // Initial fetch
+        fetchCallData();
+    </script>
+</body>
+</html>
