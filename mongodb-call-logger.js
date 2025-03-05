@@ -24,7 +24,7 @@ const logger = winston.createLogger({
 });
 
 // MongoDB Connection URI
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://shahbazcool606:EUxblEBvZRGwPqtu@cluster01.lnyek.mongodb.net/?retryWrites=true&w=majority&appName=Cluster01';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://urduxvoicebot:urduxvoicebot@cluster0.c6tjb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
 // MongoDB Connection with logging
 mongoose.connect(MONGODB_URI, {
