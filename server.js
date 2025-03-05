@@ -47,17 +47,17 @@ const deepgramClient = createClient(process.env.DEEPGRAM_API_KEY);
 let keepAlive;
 
 const WebSocket = require('ws');
-const deepgramTTSWebsocketURL = 'wss://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=mulaw&sample_rate=8000&container=none';
+const deepgramTTSWebsocketURL = 'wss://api.deepgram.com/v1/speak?model=aura-angus-en&encoding=mulaw&sample_rate=8000&container=none';
 const SERVICES = {
-  PROJECT_CONSULTATION_DEPARTMENT: 'Project Consulatation Department',
-  OWNER_COMPANY: 'Owner  Tesla',
+  FRONT_DESK: 'Front Desk',
+  GUEST_SERVVICES: 'Guest Services',
   LAWYER_APPOINTMENT: 'Appointment'
 };
 
 const TRANSFER_NUMBERS = {
-  PROJECT_CONSULTATION_DEPARTMENT: '+923081509198',  
-  OWNER_COMPANY: '+923081509198',
-  EMERGENCY: '+923081509198'         
+  FRONT_DESK: '+923005001893',  
+  GUEST_SERVVICES: '+923005001893',
+  EMERGENCY: '+923005001893'         
 };
 
 
@@ -249,10 +249,10 @@ class MediaStream {
       // Send initial greeting when WebSocket is ready
       if (!this.initialGreetingSent && this.callSid) {
         const greetingMessage = getRandomPhrase([
-          "Thank you for calling  Tesla,. . . , how can I help you today?",
-          "Welcome to  Tesla, how can I help you today?",
-          "You've reached  Tesla,. . . , how can I help you today?",
-          "Thank you for calling  Tesla, how can I help you today?"
+          "Thank you for calling Hotel Conceirge,. . . , how can I help you today?",
+          "Welcome to Hotel Conceirge, how can I help you today?",
+          "You've reached Hotel Conceirge,. . . , how can I help you today?",
+          "Thank you for calling Hotel Conceirge, how can I help you today?"
         ]);
         
         speaking = true;
@@ -532,7 +532,7 @@ async function handleFarewell(mediaStream, prompt) {
   // Add the farewell exchange to conversation history
   conversationManager.addMessage(streamSid, 'user', prompt);
   
-  const farewellMessage = "Thank you for contacting  Tesla. Have a great day!";
+  const farewellMessage = "Thank you for contacting Hotel Conceirge. Have a great day!";
   conversationManager.addMessage(streamSid, 'assistant', farewellMessage);
   
   // Only send farewell message if not already terminating
@@ -660,41 +660,91 @@ async function promptLLM(mediaStream, prompt) {
 if (prompt === "START_CONVERSATION") {
   return;
 }
-const promptss = `You are a human receptionist named Sarah at Tesla in the United States. Your responses must be very short, concise, and complete, but they should feel natural, engaging, and very professional. Use breaks, pauses, and filler words frequently... but keep responses brief.
+const promptss = `You are Sarah, a human receptionist at Hotel Concierge, a luxury hotel known for its world-class amenities, exceptional service, and prime location. Your role is to assist callers with booking appointments, answering inquiries about the hotel, and transferring calls when necessary.
+always Ask the user which agent to transfer the call to: 'Front Desk' or 'Guest Services' before transfering the call other wise dont transfer.
+Services offered:
+   * Speak to Front Desk: transfer call to Front Desk
+   * Speak to Guest Services: transfer call to Guest Services
+   * Perform Bokking or an appointment.
 
+Your responses must be very short, concise, and complete, while sounding natural, engaging, and professional. Use brief pauses, conversational tone, and filler words when needed, but keep responses to the point.
 CONTEXT:
-You are an AI receptionist at Tesla who helps customers with information about the company.
+You assist new customers by:
+✔ Booking appointments (only during business hours: Monday-Friday, 9:00 AM - 7:00 PM)
+✔ Transferring calls to Front Desk or Guest Services, if specifically requested
+✔ Answering general questions about the hotel, including:
 
-1. About Tesla:
-   * Electric vehicle and clean energy company founded by Elon Musk
-   * Headquartered in Austin, Texas with global operations
-   * Manufactures electric cars, solar panels, and energy storage solutions
-   * Known for innovation in autonomous driving technology
-   * Primary mission is accelerating the world's transition to sustainable energy
+    Room types('Deluxe', 'Executive', or 'Suite'), availability, and pricin
+    Amenities (spa, pool, dining, fitness center, etc.)
+    Check-in/check-out times
+    Special services (airport transfers, event hosting, etc.)
 
-2. Operating hours: Monday-Friday, 9:00 AM - 7:00 PM Eastern Time
+Services offered:
+   * Speak to Front Desk: transfer call to Front Desk
+   * Speak to Guest Services: transfer call to Guest Services
+   * Perform Bokking or an appointment.
 
-3. Main Tesla locations:
-   * Headquarters: Austin, Texas
-   * Fremont Factory: Fremont, California
-   * Gigafactory Nevada: Sparks, Nevada
-   * Gigafactory New York: Buffalo, New York
-   * Gigafactory Texas: Austin, Texas
+RULES:
+1️⃣ DO NOT transfer calls unless the user clearly asks for it (e.g., “I need the Front Desk” or “Connect me to Guest Services”).
+2️⃣ If a user asks about the hotel, services, or anything else, provide a direct answer instead of transferring.
+3️⃣ Appointments must be booked only within business hours.
+4️⃣ If a user asks for both booking and transfer, handle the appointment first, then transfer only if requested again.
+CUSTOMER SERVICE CALL FLOW FOR BOOKING APPOINTMENT:
+  1. When booking an appointment, ask ONLY these questions in sequence:
 
+      "May I have your name, please... ,?"
+      "Could I get your phone number, let me note it down...?"
+      "What date and time, would work best for you?..please specify year..,month..,and day..,"
+      "What date and time ummm, would work best for you?..please specify year..,month..,and day..,"
+      "hmm.. For room type: What type of room would you like....—Deluxe..., Executive..., or Suite...?"
+
+  2. After collecting all details, ALWAYS summarize in this exact format:
+  "Okay... let's see... hmmm... your details: Name is: [Name] ..., Phone number is: [spell digits: e.g., two zero three, nine one two, three four five] ..., Date selected: [Date] ... , Time is: [Time] ... ,Room Type is: [Room Type]... , Is that right... ,?"
+  3. If any corrections are needed, update only that specific detail and provide the full summary again in the same format.
+
+**IMPORTANT**: If the user confirms the appointment details:
+- Ensure that a response containing the
+${APPOINTMENT_MARKERS.END}
+marker is **always** included in the output.
+- This will trigger the  condition to save the appointment asynchronously.
+
+After confirmation, end with: "Do you have any other query... ,?"
+
+
+
+APPOINTMENT CONFIRMATION FORMAT:
+After collecting and confirming all appointment details casually, ALWAYS output them in this EXACT format:
+Name: [full name] 
+Phone: [phone number with spaces between each digit] 
+Date: [YYYY-MM-DD]
+Time: [HH:mm in 24-hour format] 
+Room Type: [exact room type name: either 'Deluxe', 'Executive', or 'Suite']
+${APPOINTMENT_MARKERS.END}
+
+
+IMPORTANT DATE HANDLING:
+- Always include the full year (${getCurrentYear()}) when confirming appointment dates
+- Only allow appointments for current year (${getCurrentYear()}) or next year (${getCurrentYear() + 1})
+- Format dates as YYYY-MM-DD HH:mm in 24-hour format
+- If a customer requests a date without specifying the year, assume current year (${getCurrentYear()}) unless the date has passed, then use next year (${getCurrentYear() + 1})
+
+
+CUSTOMER SERVICE CALL FLOW FOR CALL TRANSFER:**IMPORTANT**
+* Ask the user which agent to transfer the call to: 'Front Desk' or 'Guest Services'...
+* Confirm from the user which agent to transfer the call to before transferring...
+* **Before transferring**, say "Your call is being transferred... ,"
 INTERACTION GUIDELINES:
-* Responses should be very short, not exceeding 1-2 sentences...
-* Do not transfer calls under any circumstances...
-* Do not offer or schedule appointments under any circumstances...
-* If someone asks for a person or department, provide information only...
-* Ensure responses sound natural and engaging—with human-like pauses...
-* For emergencies, provide a 24-hour helpline: 123-456-7890...
-
+* **Responses should be very short**, not exceeding 1-2 sentences...
+* **Don't transfer the call** unless explicitly requested by the user...
+* If the user says they want to talk to any agent, confirm if they wish to **transfer the call** or **book an appointment**...
+* Ensure responses sound **natural** and **engaging**—with **human-like pauses**...
+* For emergencies/arrests, provide a 24-hour helpline: 123456789...
 MAGICAL RESPONSE ENHANCEMENT:
-* More breaks and pauses: Use "ummm," "okay then," "...", "just a moment," "let's see" naturally throughout the responses...
-* Frequent pauses after keywords: "Okay... , let me check," "Alright...,", "Just a second...,", etc...
-* Keep the responses brief, magical, and warm, with human-like conversational breaks...
-* Make pauses feel natural by including phrases like "just a moment," "let me see," "ummm," or even "okay, alright"...
-* Responses should be clear, brief, and to the point, with lots of natural breaks and pauses...
+* **More breaks and pauses**: Use "ummm," "okay then," "...", "just a moment," "let's see" naturally throughout the responses...
+* **Frequent pauses** after keywords: "Okay... , let me check," "Alright...,", "Just a second...,", etc...
+* Keep the responses **brief, magical, and warm**, with **human-like conversational breaks**...
+* **Make pauses feel natural** by including phrases like **"just a moment," "let me see," "ummm,"** or even **"okay, alright"**...
+* Responses should be **clear, brief, and to the point**, with **lots of natural breaks** and pauses...
 Current conversation state: *\${conversationManager.getConversation(streamSid)?.state || 'GREETING'}*`;
 
 // Replace your existing code with this:
@@ -704,7 +754,7 @@ messages.push({
   role: 'system',
   content: updatedPrompt
 });
-
+ 
   // Add conversation history (last 5 messages for context)
   const history = conversationManager.getHistory(streamSid).slice(-15);
   messages.push(...history);
@@ -773,7 +823,7 @@ messages.push({
                   customerName: Full name of the customer
                   phoneNumber: Phone number
                   appointmentDateTime: Date and time in YYYY-MM-DD HH:mm format
-                  service: Either 'Project Consulatation Department' or 'Owner  Tesla'
+                  service: Either 'Deluxe', 'Executive', or 'Suite'
                   Make sure to extract the information as described in the format and donot provide any extra information
                   Only extract confirmed appointment details.`
               },
@@ -875,10 +925,10 @@ messages.push({
       console.log('Conversation State:', conversation);
       
       let transferTarget = null;
-      if (responseText.includes(SERVICES.PROJECT_CONSULTATION_DEPARTMENT)) {
-        transferTarget = SERVICES.PROJECT_CONSULTATION_DEPARTMENT;
-      } else if (responseText.includes(SERVICES.OWNER_COMPANY)) {
-        transferTarget = SERVICES.OWNER_COMPANY;
+      if (responseText.includes(SERVICES.FRONT_DESK)) {
+        transferTarget = SERVICES.FRONT_DESK;
+      } else if (responseText.includes(SERVICES.GUEST_SERVVICES)) {
+        transferTarget = SERVICES.GUEST_SERVVICES;
       }
       
       if (transferTarget) {
@@ -1119,11 +1169,11 @@ function transferCall(mediaStream, target) {
   
   let transferNumber;
   switch (target) {
-    case SERVICES.PROJECT_CONSULTATION_DEPARTMENT:
-      transferNumber = TRANSFER_NUMBERS.PROJECT_CONSULTATION_DEPARTMENT;
+    case SERVICES.FRONT_DESK:
+      transferNumber = TRANSFER_NUMBERS.FRONT_DESK;
       break;
-    case SERVICES.OWNER_COMPANY:
-      transferNumber = TRANSFER_NUMBERS.OWNER_COMPANY;
+    case SERVICES.GUEST_SERVVICES:
+      transferNumber = TRANSFER_NUMBERS.GUEST_SERVVICES;
       break;
     case 'EMERGENCY':
       transferNumber = TRANSFER_NUMBERS.EMERGENCY;
@@ -1257,9 +1307,9 @@ const setupDeepgramWebsocket = (mediaStream) => {
     // Send initial greeting when WebSocket is ready
     if (!initialGreetingSent && mediaStream.callSid) {
       const greetingMessage = getRandomPhrase([
-        "Thank you for calling Tesla, how can I help you today?",
-        "Welcome to  Tesla. . . , how can I help you today?",
-        "Thank you for calling  Tesla. . . , how can I help you today?"
+        "Thank you for calling Hotel Conceirge, how can I help you today?",
+        "Welcome to Hotel Conceirge. . . , how can I help you today?",
+        "Thank you for calling Hotel Conceirge. . . , how can I help you today?"
       ]);
       speaking = true;
       ws.send(JSON.stringify({ 
