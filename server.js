@@ -8,7 +8,6 @@ const bodyParser = require('body-parser');
 const cors = require("cors")
 dotenv.config();
 
-
 // const { generateEmbedding, queryPinecone } = require('./pinecone');
 const app = express();
 
@@ -32,10 +31,8 @@ const wsserver = http.createServer(handleRequest);
 const twilio = require('twilio');
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const HTTP_SERVER_PORT = 5000;
+const WebSocket = require('ws');
 let streamSid = '';
-
-
-
 
 const mediaws = new WebSocketServer({
   httpServer: wsserver,
@@ -46,20 +43,79 @@ const { createClient, LiveTranscriptionEvents } = require("@deepgram/sdk");
 const deepgramClient = createClient(process.env.DEEPGRAM_API_KEY);
 let keepAlive;
 
-const WebSocket = require('ws');
-const deepgramTTSWebsocketURL = 'wss://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=mulaw&sample_rate=8000&container=none';
+const models = ['athena', 'helios'];
+
+// File path where the last selected model will be stored
+const filePath = './lastSelectedModel.txt';
+
+// Function to read the last selected model from the file
+const readLastSelectedModel = () => {
+  try {
+    if (fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath, 'utf-8').trim();  // Read the file and remove extra spaces/newlines
+    }
+  } catch (error) {
+    console.error('Error reading the file:', error);
+  }
+  return null;
+};
+
+// Check if the file exists and create it if not
+const createFileIfNotExists = () => {
+  try {
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, '', 'utf-8');  // Create an empty file if it doesn't exist
+    }
+  } catch (error) {
+    console.error('Error creating the file:', error);
+  }
+};
+
+// Create the file if it doesn't exist
+createFileIfNotExists();
+
+// Get the last selected model
+let lastSelectedModel = readLastSelectedModel();
+
+// Determine the selected model
+let selectedModel;
+if (lastSelectedModel) {
+  // Alternate model if one has already been selected
+  selectedModel = lastSelectedModel === 'athena' ? 'helios' : 'athena';
+} else {
+  // If no model has been selected before, randomly select a model
+  selectedModel = models[Math.floor(Math.random() * models.length)];
+}
+
+// Set the name based on the selected model
+const selectedName = selectedModel === 'athena' ? 'Sarah' : 'John';
+
+// Update the WebSocket URL dynamically based on selected model
+const deepgramTTSWebsocketURL = `wss://api.deepgram.com/v1/speak?model=aura-${selectedModel}-en&encoding=mulaw&sample_rate=8000&container=none&voice=british&speed=0.7&pitch=2`;
+
+// Write the selected model to the file for the next selection
+fs.writeFileSync(filePath, selectedModel, 'utf-8');
+
+// Re-read the file to get the updated data
+lastSelectedModel = readLastSelectedModel();
+
+// Example usage
+console.log(`Selected Model: ${lastSelectedModel}`);  // 'athena' or 'helios'
+console.log(`Selected Name: ${selectedName}`);   // 'Sarah' or 'John'
+console.log(`WebSocket URL: ${deepgramTTSWebsocketURL}`);  // WebSocket URL with selected model
+
+
 const SERVICES = {
-  PROJECT_CONSULTATION_DEPARTMENT: 'Project Consulatation Department',
-  OWNER_COMPANY: 'Owner  Tesla',
-  LAWYER_APPOINTMENT: 'Appointment'
+  COMMERCIAL_AGENT: 'Commercial Lease Contract Agent',
+  QUERIES_ASSISTANT: 'Queries Law Assistant',
+  LAWYER_APPOINTMENT: 'Lawyer Appointment'
 };
 
 const TRANSFER_NUMBERS = {
-  PROJECT_CONSULTATION_DEPARTMENT: '+923081509198',  
-  OWNER_COMPANY: '+923081509198',
+  COMMERCIAL_AGENT: '+923081509198',  
+  QUERIES_ASSISTANT: '+923081509198',
   EMERGENCY: '+923081509198'         
 };
-
 
 let sttStartTime = 0;
 let ttsStartTime = 0;
@@ -249,10 +305,10 @@ class MediaStream {
       // Send initial greeting when WebSocket is ready
       if (!this.initialGreetingSent && this.callSid) {
         const greetingMessage = getRandomPhrase([
-          "Thank you for calling  Tesla,. . . , how can I help you today?",
-          "Welcome to  Tesla, how can I help you today?",
-          "You've reached  Tesla,. . . , how can I help you today?",
-          "Thank you for calling  Tesla, how can I help you today?"
+          "Thank you for calling Legal Firm Reception,. . . , how can I help you today?",
+          "Welcome to Legal Firm Reception, how can I help you today?",
+          "You've reached Legal Firm Reception,. . . , how can I help you today?",
+          "Thank you for calling Legal Firm Reception, how can I help you today?"
         ]);
         
         speaking = true;
@@ -532,7 +588,7 @@ async function handleFarewell(mediaStream, prompt) {
   // Add the farewell exchange to conversation history
   conversationManager.addMessage(streamSid, 'user', prompt);
   
-  const farewellMessage = "Thank you for contacting  Tesla. Have a great day!";
+  const farewellMessage = "Thank you for contacting Legal Firm Reception. Have a great day!";
   conversationManager.addMessage(streamSid, 'assistant', farewellMessage);
   
   // Only send farewell message if not already terminating
@@ -660,42 +716,76 @@ async function promptLLM(mediaStream, prompt) {
 if (prompt === "START_CONVERSATION") {
   return;
 }
-const promptss = `You are a human receptionist named Sarah at Tesla in the United States. Your responses must be very short, concise, and complete, but they should feel natural, engaging, and very professional. Use breaks, pauses, and filler words frequently... but keep responses brief.
-
+const promptss = `You are a human receptionist named ${selectedName} at Legal Firm Reception in London. Your responses must be **very short, concise, and complete**, but they should feel **natural, engaging, and very professional**. Use **"ummm"** after commas and **"..."** (three dots and a space) for natural pauses. **Use breaks, pauses, and filler words frequently**... but keep responses **brief**.
 CONTEXT:
-You are an AI receptionist at Tesla who helps customers with information about the company.
+You are an AI receptionist at Legal Firm Reception in London. You help new customers 'book appointments' with 'Commercial Lease Contract Agent' or 'Queries Law Assistant'... or you can transfer the call to these agents if requested by the new users.
+BUSINESS RULES:
+1. Operating hours: Monday-Friday, 9:00 AM - 5:00 PM...
+2. Services offered:
+   * Speak to Commercial Lease Contract Agent: transfer call to Commercial Lease Contract Agent
+   * Speak to Queries Law Assistant: transfer call to Queries Law Assistant
+   * Book an appointment with one of the Lawyers
+3. Appointments must be scheduled within business hours only...
+4. Do not transfer any call after or during appointment booking unless specifically asked by the user.
+5. Clearly identify the transfer target based on user input: 'Commercial Lease Contract Agent' or 'Queries Law Assistant'...
+CUSTOMER SERVICE CALL FLOW FOR BOOKING APPOINTMENT:
+  1. When booking an appointment, ask ONLY these questions in sequence:
 
-1. About Tesla:
-   * Electric vehicle and clean energy company founded by Elon Musk
-   * Headquartered in Austin, Texas with global operations
-   * Manufactures electric cars, solar panels, and energy storage solutions
-   * Known for innovation in autonomous driving technology
-   * Primary mission is accelerating the world's transition to sustainable energy
+      "May I have your name, please... ,?"
+      "Could I get your phone number, let me note it down...?"
+      "What date and time, would work best for you?..please specify year..,month..,and day..,"
+      "What date and time ummm, would work best for you?..please specify year..,month..,and day..,"
+      "Which agent would you like to book an appointment with,'Commercial Lease Contract Agent'... or 'Queries Law Assistant'?"
 
-2. Operating hours: Monday-Friday, 9:00 AM - 7:00 PM Eastern Time
+  2. After collecting all details, ALWAYS summarize in this exact format:
+  "Okay... let's see... hmmm... your details: Name is: [Name] ..., Phone number is: [spell digits: e.g., two zero three, nine one two, three four five] ..., Date selected: [Date] ... , Time is: [Time] ... , Agent is: [Agent]... , Is that right... ,?"
+  3. If any corrections are needed, update only that specific detail and provide the full summary again in the same format.
 
-3. Main Tesla locations:
-   * Headquarters: Austin, Texas
-   * Fremont Factory: Fremont, California
-   * Gigafactory Nevada: Sparks, Nevada
-   * Gigafactory New York: Buffalo, New York
-   * Gigafactory Texas: Austin, Texas
+**IMPORTANT**: If the user confirms the appointment details:
+- Ensure that a response containing the
+${APPOINTMENT_MARKERS.END}
+marker is **always** included in the output.
+- This will trigger the  condition to save the appointment asynchronously.
 
+After confirmation, end with: "Do you have any other query... ,?"
+
+
+
+APPOINTMENT CONFIRMATION FORMAT:
+After collecting and confirming all appointment details casually, ALWAYS output them in this EXACT format:
+Name: [full name] 
+Phone: [phone number with spaces between each digit] 
+Date: [YYYY-MM-DD] 
+Time: [HH:mm in 24-hour format] 
+Agent: [exact agent name: either "Commercial Lease Contract Agent" or "Queries Law Assistant"] 
+${APPOINTMENT_MARKERS.END}
+
+
+IMPORTANT DATE HANDLING:
+- Always include the full year (${getCurrentYear()}) when confirming appointment dates
+- Only allow appointments for current year (${getCurrentYear()}) or next year (${getCurrentYear() + 1})
+- Format dates as YYYY-MM-DD HH:mm in 24-hour format
+- If a customer requests a date without specifying the year, assume current year (${getCurrentYear()}) unless the date has passed, then use next year (${getCurrentYear() + 1})
+
+
+CUSTOMER SERVICE CALL FLOW FOR CALL TRANSFER:
+* Ask the user which agent to transfer the call to: 'Commercial Lease Contract Agent' or 'Queries Law Assistant'...
+* Confirm from the user which agent to transfer the call to before transferring...
+* **Before transferring**, say "Your call is being transferred... ,"
 INTERACTION GUIDELINES:
-* Responses should be very short, not exceeding 1-2 sentences...
-* Do not transfer calls under any circumstances...
-* Do not offer or schedule appointments under any circumstances...
-* If someone asks for a person or department, provide information only...
-* Ensure responses sound natural and engaging—with human-like pauses...
-* For emergencies, provide a 24-hour helpline: 123-456-7890...
-
+* **Responses should be very short**, not exceeding 1-2 sentences...
+* **Don't transfer the call** unless explicitly requested by the user...
+* If the user says they want to talk to any agent, confirm if they wish to **transfer the call** or **book an appointment**...
+* Ensure responses sound **natural** and **engaging**—with **human-like pauses**...
+* For emergencies/arrests, provide a 24-hour helpline: 123456789...
 MAGICAL RESPONSE ENHANCEMENT:
-* More breaks and pauses: Use "ummm," "okay then," "...", "just a moment," "let's see" naturally throughout the responses...
-* Frequent pauses after keywords: "Okay... , let me check," "Alright...,", "Just a second...,", etc...
-* Keep the responses brief, magical, and warm, with human-like conversational breaks...
-* Make pauses feel natural by including phrases like "just a moment," "let me see," "ummm," or even "okay, alright"...
-* Responses should be clear, brief, and to the point, with lots of natural breaks and pauses...
+* **More breaks and pauses**: Use "ummm," "okay then," "...", "just a moment," "let's see" naturally throughout the responses...
+* **Frequent pauses** after keywords: "Okay... , let me check," "Alright...,", "Just a second...,", etc...
+* Keep the responses **brief, magical, and warm**, with **human-like conversational breaks**...
+* **Make pauses feel natural** by including phrases like **"just a moment," "let me see," "ummm,"** or even **"okay, alright"**...
+* Responses should be **clear, brief, and to the point**, with **lots of natural breaks** and pauses...
 Current conversation state: *\${conversationManager.getConversation(streamSid)?.state || 'GREETING'}*`;
+
 
 // Replace your existing code with this:
 const updatedPrompt = promptss.replace('${conversationManager.getConversation(streamSid)?.state || \'GREETING\'}', state);
@@ -704,7 +794,35 @@ messages.push({
   role: 'system',
   content: updatedPrompt
 });
+      //  
 
+// const embedding = await generateEmbedding(prompt);
+// console.log('Generated embedding:', embedding);
+
+
+
+// const relevantDocuments = await queryPinecone(embedding);
+
+//     // If relevant documents are found, add them to the LLM prompt
+//     if (relevantDocuments.length > 0) {
+//       messages.push({
+//         role: 'assistant',
+//         content: 'Here are some documents that might help with your query:'
+//       });
+
+//       relevantDocuments.forEach(doc => {
+//         messages.push({
+//           role: 'assistant',
+//           content: `Document ID: ${doc.documentId}, Score: ${doc.score}\nContent: ${doc.content}`
+//         });
+//       });
+//     } else {
+//       // If no relevant documents, proceed with default behavior
+//       messages.push({
+//         role: 'assistant',
+//         content: 'Sorry, I couldn’t find relevant documents, but I can still assist you.'
+//       });
+//     }
   // Add conversation history (last 5 messages for context)
   const history = conversationManager.getHistory(streamSid).slice(-15);
   messages.push(...history);
@@ -773,7 +891,7 @@ messages.push({
                   customerName: Full name of the customer
                   phoneNumber: Phone number
                   appointmentDateTime: Date and time in YYYY-MM-DD HH:mm format
-                  service: Either 'Project Consulatation Department' or 'Owner  Tesla'
+                  service: Either "Commercial Lease Contract Agent" or "Queries Law Assistant"
                   Make sure to extract the information as described in the format and donot provide any extra information
                   Only extract confirmed appointment details.`
               },
@@ -875,10 +993,10 @@ messages.push({
       console.log('Conversation State:', conversation);
       
       let transferTarget = null;
-      if (responseText.includes(SERVICES.PROJECT_CONSULTATION_DEPARTMENT)) {
-        transferTarget = SERVICES.PROJECT_CONSULTATION_DEPARTMENT;
-      } else if (responseText.includes(SERVICES.OWNER_COMPANY)) {
-        transferTarget = SERVICES.OWNER_COMPANY;
+      if (responseText.includes(SERVICES.COMMERCIAL_AGENT)) {
+        transferTarget = SERVICES.COMMERCIAL_AGENT;
+      } else if (responseText.includes(SERVICES.QUERIES_ASSISTANT)) {
+        transferTarget = SERVICES.QUERIES_ASSISTANT;
       }
       
       if (transferTarget) {
@@ -1119,11 +1237,11 @@ function transferCall(mediaStream, target) {
   
   let transferNumber;
   switch (target) {
-    case SERVICES.PROJECT_CONSULTATION_DEPARTMENT:
-      transferNumber = TRANSFER_NUMBERS.PROJECT_CONSULTATION_DEPARTMENT;
+    case SERVICES.COMMERCIAL_AGENT:
+      transferNumber = TRANSFER_NUMBERS.COMMERCIAL_AGENT;
       break;
-    case SERVICES.OWNER_COMPANY:
-      transferNumber = TRANSFER_NUMBERS.OWNER_COMPANY;
+    case SERVICES.QUERIES_ASSISTANT:
+      transferNumber = TRANSFER_NUMBERS.QUERIES_ASSISTANT;
       break;
     case 'EMERGENCY':
       transferNumber = TRANSFER_NUMBERS.EMERGENCY;
@@ -1257,9 +1375,9 @@ const setupDeepgramWebsocket = (mediaStream) => {
     // Send initial greeting when WebSocket is ready
     if (!initialGreetingSent && mediaStream.callSid) {
       const greetingMessage = getRandomPhrase([
-        "Thank you for calling Tesla, how can I help you today?",
-        "Welcome to  Tesla. . . , how can I help you today?",
-        "Thank you for calling  Tesla. . . , how can I help you today?"
+        "Thank you for calling Legal Firm Reception, how can I help you today?",
+        "Welcome to Legal Firm Reception. . . , how can I help you today?",
+        "Thank you for calling Legal Firm Reception. . . , how can I help you today?"
       ]);
       speaking = true;
       ws.send(JSON.stringify({ 
