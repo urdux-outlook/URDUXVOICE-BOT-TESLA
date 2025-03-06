@@ -34,9 +34,6 @@ const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_A
 const HTTP_SERVER_PORT = 8080;
 let streamSid = '';
 
-
-
-
 const mediaws = new WebSocketServer({
   httpServer: wsserver,
   autoAcceptConnections: true,
