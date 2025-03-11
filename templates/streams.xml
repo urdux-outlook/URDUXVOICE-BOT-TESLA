@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <Response>
   <Connect>
-    <Stream url="wss://voice-bot-tesla-cpd3cmasgefkcrbv.centralindia-01.azurewebsites.net/streams" />
+    <!-- <Stream url="wss://voice-bot-tesla-cpd3cmasgefkcrbv.centralindia-01.azurewebsites.net/streams" /> -->
+    <Stream url="wss://upward-apparent-sunbird.ngrok-free.app/streams"/>
   </Connect>
 </Response>
