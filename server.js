@@ -47,7 +47,7 @@ const deepgramClient = createClient(process.env.DEEPGRAM_API_KEY);
 let keepAlive;
 
 const WebSocket = require('ws');
-const deepgramTTSWebsocketURL = 'wss://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=mulaw&sample_rate=8000&container=none&speed=0.5&pitch=2'; 
+const deepgramTTSWebsocketURL = 'wss://api.deepgram.com/v1/speak?model=aura-athena-en&encoding=mulaw&sample_rate=8000&container=none&speed=0.9&pitch=2'; 
 const SERVICES = {
   PROJECT_CONSULTATION_DEPARTMENT: 'Project Consulatation Department',
   OWNER_COMPANY: 'Owner  Tesla',
@@ -705,8 +705,11 @@ RESPONSE STYLE GUIDELINES:
   - After greeting the caller: "Hello... how can I help you today?"
   - When transitioning to new information: "About our hours... we're open Monday through Friday"
   - When processing a question: "Let me see... our headquarters is in Austin"
-  - Never include (laugh), (laughs), (pause), 'ha ha ha'
-  - If you do include laugh, then delete them from your response
+  - Never include "(laugh)", "(laughs)", "(pause)", "ha ha ha"
+  - replace "(laugh)","(laughs)","(pause)", "*laughs*" with ". . . "
+  - replace "(laugh)" with ". . . "
+  - replace "(pause)" with ". . . "
+  - replace "(laughs)" with  ". . . "
 * Use filler words sparingly and strategically (choose only one per response):
   - For thinking moments: "Hmm," "Well," or "Let me see"
   - For transitions: "Actually," "Now," or "So"
