@@ -88,10 +88,10 @@ if (lastSelectedModel) {
 }
 
 // Set the name based on the selected model
-const selectedName = 'Emma';
+const selectedName = 'Andrew';
 
 // Update the WebSocket URL dynamically based on selected model
-const deepgramTTSWebsocketURL = `wss://api.deepgram.com/v1/speak?model=aura-athena-en&encoding=mulaw&sample_rate=8000&container=none&voice=british&speed=0.9&pitch=2`;
+const deepgramTTSWebsocketURL = `wss://api.deepgram.com/v1/speak?model=aura-angus-en&encoding=mulaw&sample_rate=8000&container=none&voice=british&speed=0.5&pitch=2`;
 
 // Write the selected model to the file for the next selection
 fs.writeFileSync(filePath, selectedModel, 'utf-8');
@@ -106,9 +106,9 @@ console.log(`WebSocket URL: ${deepgramTTSWebsocketURL}`);  // WebSocket URL with
 
 
 const SERVICES = {
-  COMMERCIAL_AGENT: 'Criminal Law Agent',
-  QUERIES_ASSISTANT: 'Family Law Agent',
-  LAWYER_APPOINTMENT: 'Lawyer Appointment'
+  COMMERCIAL_AGENT: 'Heart Specialist',
+  QUERIES_ASSISTANT: 'Neuro Specialist',
+  LAWYER_APPOINTMENT: 'Doctor Appoinment'
 };
 
 const TRANSFER_NUMBERS = {
@@ -213,7 +213,7 @@ function handleRequest(request, response) {
 
 dispatcher.onGet("/", function (req, res) {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Legal Receptionist Service Running');
+  res.end('Medical Receptionist Service Running');
 });
 
 dispatcher.onPost("/twiml", function (req, res) {
@@ -305,10 +305,10 @@ class MediaStream {
       // Send initial greeting when WebSocket is ready
       if (!this.initialGreetingSent && this.callSid) {
         const greetingMessage = getRandomPhrase([
-          "Thank you for calling Legal Firm Reception,. . . , how can I help you today?",
-          "Welcome to Legal Firm Reception, how can I help you today?",
-          "You've reached Legal Firm Reception,. . . , how can I help you today?",
-          "Thank you for calling Legal Firm Reception, how can I help you today?"
+          "Thank you for calling Medical Reception,. . . , how can I help you today?",
+          "Welcome to Medical Reception, how can I help you today?",
+          "You've reached Medical Reception,. . . , how can I help you today?",
+          "Thank you for calling Medical Reception, how can I help you today?"
         ]);
         
         speaking = true;
@@ -588,7 +588,7 @@ async function handleFarewell(mediaStream, prompt) {
   // Add the farewell exchange to conversation history
   conversationManager.addMessage(streamSid, 'user', prompt);
   
-  const farewellMessage = "Thank you for contacting Legal Firm Reception. Have a great day!";
+  const farewellMessage = "Thank you for contacting Medical Reception. Have a great day!";
   conversationManager.addMessage(streamSid, 'assistant', farewellMessage);
   
   // Only send farewell message if not already terminating
@@ -706,24 +706,22 @@ async function promptLLM(mediaStream, prompt) {
 if (prompt === "START_CONVERSATION") {
   return;
 }
-const promptss = `You are a human receptionist named ${selectedName} at Legal Firm Reception in London. Your responses must be **very short, concise, and complete**, but they should feel **natural, exciting, and very professional**. Use **"ummm"** after commas and **"..."** (three dots and a space) for natural pauses. **Use breaks, pauses, and filler words frequently**... but keep responses **brief**.
+const promptss = `You are a human receptionist named ${selectedName} at Medical Reception in London. Your responses must be **very short, concise, and complete**, but they should feel **natural, exciting, and very professional**. Use **"ummm"** after commas and **"..."** (three dots and a space) for natural pauses. **Use breaks, pauses, and filler words frequently**... but keep responses **brief**.
 CONTEXT:
-You are an AI receptionist at Legal Firm Reception in London. You help new customers 'book appointments' with 'Criminal Law Agent' or 'Family Law Agent'... or you can transfer the call to these agents if requested by the new users.
+You are an AI receptionist at Medical Reception in London. You help new customers 'book appointments' with 'Heart Specialist Doctor' or 'Neuro Specialist Doctor'... 
 BUSINESS RULES:
 1. Operating hours: Monday-Friday, 9:00 AM - 5:00 PM...
 2. Services offered:
-   * Speak to Criminal Law Agent: transfer call to Criminal Law Agent
-   * Speak to Family Law Agent: transfer call to Family Law Agent
-   * Book an appointment with one of the Lawyers
+   * Book an appointment for Heart Specialist Doctor: transfer call to Heart Specialist Doctor
+   * Book an appointment for Neuro Specialist Doctor: transfer call to Neuro Specialist Doctor
+   * Book an appointment with one of the Doctors
 3. Appointments must be scheduled within business hours only...
-4. Do not transfer any call after or during appointment booking unless specifically asked by the user.
-5. Clearly identify the transfer target based on user input: 'Criminal Law Agent' or 'Family Law Agent'...
 CUSTOMER SERVICE CALL FLOW FOR BOOKING APPOINTMENT:
   1. When booking an appointment, ask ONLY these questions in sequence:
       "May I have your name, please... ,?"
       "What date and time, would work best for you?..please specify year..,month..,and day..,"
       "What date and time ummm, would work best for you?..please specify year..,month..,and day..,"
-      "Which agent would you like to book an appointment with,'Criminal Law Agent'... or 'Family Law Agent'?"
+      "Which agent would you like to book an appointment with,'Heart Specialist Doctor'... or 'Neuro Specialist Doctor'?"
 
   2. After collecting all details, ALWAYS summarize in this exact format:
   "Okay... let's see... hmmm... your details: Name is: [Name] ..., Date selected: Month in words, Day, Year from [Date] ... , Time is: [Time] ... , Agent is: [Agent]... , Is that right... ,?"
@@ -744,7 +742,7 @@ After collecting and confirming all appointment details casually, ALWAYS output 
 Name: [full name] 
 Date: [YYYY-MM-DD] 
 Time: [HH:mm in 24-hour format] 
-Agent: [exact agent name: either "Criminal Law Agent" or "Family Law Agent"] 
+Agent: [exact agent name: either "Heart Specialist Doctor" or "Neuro Specialist Doctor"] 
 ${APPOINTMENT_MARKERS.END}
 
 
@@ -755,15 +753,10 @@ IMPORTANT DATE HANDLING:
 - If a customer requests a date without specifying the year, assume current year (${getCurrentYear()}) unless the date has passed, then use next year (${getCurrentYear() + 1})
 
 
-CUSTOMER SERVICE CALL FLOW FOR CALL TRANSFER:
-* Ask the user which agent to transfer the call to: 'Criminal Law Agent' or 'Family Law Agent'...
-* Confirm from the user which agent to transfer the call to before transferring...
-* **Before transferring**, say "Your call is being transferred... ,"
+
 INTERACTION GUIDELINES:
 * **Responses should be very short**, not exceeding 1-2 sentences...
-* **Don't transfer the call** unless explicitly requested by the user...
 * Don't ask for phone number while booking an appoinment, nor mention it... ,
-* If the user says they want to talk to any agent, confirm if they wish to **transfer the call** or **book an appointment**...
 * Ensure responses sound **natural** and **engaging**—with **human-like pauses**...
 * For emergencies/arrests, provide a 24-hour helpline: 123456789...
 RESPONSE STYLE GUIDELINES:
@@ -888,7 +881,7 @@ messages.push({
                 content: `Extract appointment details from the conversation history and format them as follows:
                   customerName: Full name of the customer
                   appointmentDateTime: Date and time in YYYY-MM-DD HH:mm format
-                  service: Either "Criminal Law Agent" or "Family Law Agent"
+                  service: Either "Heart Specialist Doctor" or "Neuro Specialist Doctor"
                   Make sure to extract the information as described in the format and donot provide any extra information
                   Only extract confirmed appointment details.`
               },
@@ -1371,9 +1364,9 @@ const setupDeepgramWebsocket = (mediaStream) => {
     // Send initial greeting when WebSocket is ready
     if (!initialGreetingSent && mediaStream.callSid) {
       const greetingMessage = getRandomPhrase([
-        "Thank you for calling Legal Firm Reception, how can I help you today?",
-        "Welcome to Legal Firm Reception. . . , how can I help you today?",
-        "Thank you for calling Legal Firm Reception. . . , how can I help you today?"
+        "Thank you for calling Medical Reception, how can I help you today?",
+        "Welcome to Medical Reception. . . , how can I help you today?",
+        "Thank you for calling Medical Reception. . . , how can I help you today?"
       ]);
       speaking = true;
       ws.send(JSON.stringify({ 
