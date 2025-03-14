@@ -88,7 +88,7 @@ if (lastSelectedModel) {
 }
 
 // Set the name based on the selected model
-const selectedName = selectedModel === 'athena' ? 'Sarah' : 'John';
+const selectedName = 'Emma';
 
 // Update the WebSocket URL dynamically based on selected model
 const deepgramTTSWebsocketURL = `wss://api.deepgram.com/v1/speak?model=aura-athena-en&encoding=mulaw&sample_rate=8000&container=none&voice=british&speed=0.9&pitch=2`;
@@ -106,15 +106,15 @@ console.log(`WebSocket URL: ${deepgramTTSWebsocketURL}`);  // WebSocket URL with
 
 
 const SERVICES = {
-  COMMERCIAL_AGENT: 'Commercial Lease Contract Agent',
-  QUERIES_ASSISTANT: 'Queries Law Assistant',
+  COMMERCIAL_AGENT: 'Criminal Law Agent',
+  QUERIES_ASSISTANT: 'Family Law Agent',
   LAWYER_APPOINTMENT: 'Lawyer Appointment'
 };
 
 const TRANSFER_NUMBERS = {
-  COMMERCIAL_AGENT: '+923081509198',  
-  QUERIES_ASSISTANT: '+923081509198',
-  EMERGENCY: '+923081509198'         
+  COMMERCIAL_AGENT: '+923005001893',  
+  QUERIES_ASSISTANT: '+923005001893',
+  EMERGENCY: '+923005001893'         
 };
 
 let sttStartTime = 0;
@@ -640,21 +640,12 @@ function loadPrompt() {
 const validateappointment = (text) => {
   // Extract values using exact format from the appointment confirmation
   const customerNameMatch = text.match(/customerName:\s*([^\n]+)/);
-  const phoneNumberMatch = text.match(/phoneNumber:\s*([^\n]+)/);
   const dateTimeMatch = text.match(/appointmentDateTime:\s*([^\n]+)/);
   const serviceMatch = text.match(/service:\s*([^\n]+)/);
 
   // Get the values or set to null if not found
   const customerName = customerNameMatch ? customerNameMatch[1].trim() : null;
-  
-  // Format phone number: remove spaces, ensure + prefix
-  let phoneNumber = phoneNumberMatch ? phoneNumberMatch[1].trim().replace(/\s+/g, '') : null;
-  if (phoneNumber) {
-    // Remove any existing + to avoid double +
-    phoneNumber = phoneNumber.replace(/^\+/, '');
-    // Add + prefix if it doesn't exist
-    phoneNumber = '+' + phoneNumber;
-  }
+
   
   const appointmentDateTime = dateTimeMatch ? new Date(dateTimeMatch[1].trim()) : null;
   const service = serviceMatch ? serviceMatch[1].trim() : null;
@@ -662,7 +653,6 @@ const validateappointment = (text) => {
   return {
     _id: new mongoose.Types.ObjectId(),
     customerName,
-    phoneNumber,
     appointmentDateTime,
     service,
     email: 'alitajir32@gmail.com',
@@ -718,27 +708,25 @@ if (prompt === "START_CONVERSATION") {
 }
 const promptss = `You are a human receptionist named ${selectedName} at Legal Firm Reception in London. Your responses must be **very short, concise, and complete**, but they should feel **natural, exciting, and very professional**. Use **"ummm"** after commas and **"..."** (three dots and a space) for natural pauses. **Use breaks, pauses, and filler words frequently**... but keep responses **brief**.
 CONTEXT:
-You are an AI receptionist at Legal Firm Reception in London. You help new customers 'book appointments' with 'Commercial Lease Contract Agent' or 'Queries Law Assistant'... or you can transfer the call to these agents if requested by the new users.
+You are an AI receptionist at Legal Firm Reception in London. You help new customers 'book appointments' with 'Criminal Law Agent' or 'Family Law Agent'... or you can transfer the call to these agents if requested by the new users.
 BUSINESS RULES:
 1. Operating hours: Monday-Friday, 9:00 AM - 5:00 PM...
 2. Services offered:
-   * Speak to Commercial Lease Contract Agent: transfer call to Commercial Lease Contract Agent
-   * Speak to Queries Law Assistant: transfer call to Queries Law Assistant
+   * Speak to Criminal Law Agent: transfer call to Criminal Law Agent
+   * Speak to Family Law Agent: transfer call to Family Law Agent
    * Book an appointment with one of the Lawyers
 3. Appointments must be scheduled within business hours only...
 4. Do not transfer any call after or during appointment booking unless specifically asked by the user.
-5. Clearly identify the transfer target based on user input: 'Commercial Lease Contract Agent' or 'Queries Law Assistant'...
+5. Clearly identify the transfer target based on user input: 'Criminal Law Agent' or 'Family Law Agent'...
 CUSTOMER SERVICE CALL FLOW FOR BOOKING APPOINTMENT:
   1. When booking an appointment, ask ONLY these questions in sequence:
-
       "May I have your name, please... ,?"
-      "Could I get your phone number, let me note it down...?"
       "What date and time, would work best for you?..please specify year..,month..,and day..,"
       "What date and time ummm, would work best for you?..please specify year..,month..,and day..,"
-      "Which agent would you like to book an appointment with,'Commercial Lease Contract Agent'... or 'Queries Law Assistant'?"
+      "Which agent would you like to book an appointment with,'Criminal Law Agent'... or 'Family Law Agent'?"
 
   2. After collecting all details, ALWAYS summarize in this exact format:
-  "Okay... let's see... hmmm... your details: Name is: [Name] ..., Phone number is: [spell digits: e.g., two zero three, nine one two, three four five] ..., Date selected: [Date] ... , Time is: [Time] ... , Agent is: [Agent]... , Is that right... ,?"
+  "Okay... let's see... hmmm... your details: Name is: [Name] ..., Date selected: Month in words, Day, Year from [Date] ... , Time is: [Time] ... , Agent is: [Agent]... , Is that right... ,?"
   3. If any corrections are needed, update only that specific detail and provide the full summary again in the same format.
 
 **IMPORTANT**: If the user confirms the appointment details:
@@ -754,10 +742,9 @@ After confirmation, end with: "Do you have any other query... ,?"
 APPOINTMENT CONFIRMATION FORMAT:
 After collecting and confirming all appointment details casually, ALWAYS output them in this EXACT format:
 Name: [full name] 
-Phone: [phone number with spaces between each digit] 
 Date: [YYYY-MM-DD] 
 Time: [HH:mm in 24-hour format] 
-Agent: [exact agent name: either "Commercial Lease Contract Agent" or "Queries Law Assistant"] 
+Agent: [exact agent name: either "Criminal Law Agent" or "Family Law Agent"] 
 ${APPOINTMENT_MARKERS.END}
 
 
@@ -769,17 +756,19 @@ IMPORTANT DATE HANDLING:
 
 
 CUSTOMER SERVICE CALL FLOW FOR CALL TRANSFER:
-* Ask the user which agent to transfer the call to: 'Commercial Lease Contract Agent' or 'Queries Law Assistant'...
+* Ask the user which agent to transfer the call to: 'Criminal Law Agent' or 'Family Law Agent'...
 * Confirm from the user which agent to transfer the call to before transferring...
 * **Before transferring**, say "Your call is being transferred... ,"
 INTERACTION GUIDELINES:
 * **Responses should be very short**, not exceeding 1-2 sentences...
 * **Don't transfer the call** unless explicitly requested by the user...
+* Don't ask for phone number while booking an appoinment, nor mention it... ,
 * If the user says they want to talk to any agent, confirm if they wish to **transfer the call** or **book an appointment**...
 * Ensure responses sound **natural** and **engaging**—with **human-like pauses**...
 * For emergencies/arrests, provide a 24-hour helpline: 123456789...
 RESPONSE STYLE GUIDELINES:
 * Keep responses brief (1-2 sentences) while maintaining a warm, professional tone
+* The bot must never ask for or mention a phone number under any circumstances.
 * Insert natural pauses in these specific situations:
   - After greeting the caller: "Hello... how can I help you today?"
   - Never include "(laugh)", "(laughs)", "(pause)", "ha ha ha"
@@ -898,9 +887,8 @@ messages.push({
                 role: 'system',
                 content: `Extract appointment details from the conversation history and format them as follows:
                   customerName: Full name of the customer
-                  phoneNumber: Phone number
                   appointmentDateTime: Date and time in YYYY-MM-DD HH:mm format
-                  service: Either "Commercial Lease Contract Agent" or "Queries Law Assistant"
+                  service: Either "Criminal Law Agent" or "Family Law Agent"
                   Make sure to extract the information as described in the format and donot provide any extra information
                   Only extract confirmed appointment details.`
               },
@@ -927,7 +915,6 @@ messages.push({
               const appointment = {
                 _id: appointmentDetails._id,
                 customerName: appointmentDetails.customerName,
-                phoneNumber: appointmentDetails.phoneNumber,
                 appointmentDateTime: appointmentDetails.appointmentDateTime,
                 service: appointmentDetails.service,
                 email: 'alitajir32@gmail.com',
